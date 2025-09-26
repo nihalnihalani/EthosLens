@@ -46,6 +46,7 @@ const Graph: React.FC = () => {
   const [ForceGraph2D, setForceGraph2D] = useState<any>(null);
   const [isGraphLoading, setIsGraphLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 800, height: 500 });
 
   // Load the 2D force graph library
   useEffect(() => {
@@ -145,16 +146,76 @@ const Graph: React.FC = () => {
     return { nodeTypes, linkTypes };
   }, [graphData]);
 
-  const graphWidth = isFullscreen ? window.innerWidth : 800;
-  const graphHeight = isFullscreen ? window.innerHeight : 500;
+  // Dynamic sizing based on container and viewport
+  const graphHeight = isFullscreen ? window.innerHeight : dimensions.height;
+
+  // Update dimensions when container size changes or fullscreen toggles
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (isFullscreen) {
+        setDimensions({
+          width: window.innerWidth,
+          height: window.innerHeight
+        });
+      } else {
+        // Calculate available width from the graph container itself
+        const graphContainer = containerRef.current;
+        if (graphContainer) {
+          const containerRect = graphContainer.getBoundingClientRect();
+          const availableWidth = containerRect.width || graphContainer.offsetWidth;
+          const availableHeight = Math.max(500, window.innerHeight * 0.7); // Min 500px, max 70% of viewport
+          
+          setDimensions({
+            width: availableWidth > 0 ? availableWidth : window.innerWidth - (showControls ? 400 : 100),
+            height: availableHeight
+          });
+        } else {
+          // Fallback: calculate based on viewport and sidebar
+          const sidebarWidth = showControls ? 320 : 0; // 320px for sidebar + padding
+          const padding = 100; // General padding
+          
+          setDimensions({
+            width: window.innerWidth - sidebarWidth - padding,
+            height: Math.max(500, window.innerHeight * 0.7)
+          });
+        }
+      }
+    };
+
+    // Delay initial calculation to ensure DOM is ready
+    const timeoutId = setTimeout(updateDimensions, 100);
+
+    // Update on window resize
+    const handleResize = () => {
+      setTimeout(updateDimensions, 50); // Small delay to ensure layout is complete
+    };
+
+    window.addEventListener('resize', handleResize);
+    
+    // Use ResizeObserver to watch for container size changes
+    let resizeObserver: ResizeObserver | null = null;
+    if (containerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        setTimeout(updateDimensions, 50);
+      });
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', handleResize);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
+  }, [isFullscreen, showControls]);
 
   // Render the 2D graph component
   const renderGraph = () => {
     if (isGraphLoading || !ForceGraph2D) {
       return (
         <div 
-          className="flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg"
-          style={{ width: graphWidth - (showControls ? 300 : 0), height: graphHeight }}
+          className="flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg absolute inset-0"
         >
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-2"></div>
@@ -167,8 +228,7 @@ const Graph: React.FC = () => {
     if (!ForceGraph2D) {
       return (
         <div 
-          className="flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg"
-          style={{ width: graphWidth - (showControls ? 300 : 0), height: graphHeight }}
+          className="flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg absolute inset-0"
         >
           <div className="text-center">
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -183,8 +243,7 @@ const Graph: React.FC = () => {
     if (graphData.nodes.length === 0) {
       return (
         <div 
-          className="flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg"
-          style={{ width: graphWidth - (showControls ? 300 : 0), height: graphHeight }}
+          className="flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg absolute inset-0"
         >
           <div className="text-center">
             <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center mx-auto mb-2">
@@ -200,13 +259,12 @@ const Graph: React.FC = () => {
     return (
       <div 
         ref={containerRef}
-        className="bg-white border border-gray-200 rounded-lg overflow-hidden"
-        style={{ width: graphWidth - (showControls ? 300 : 0), height: graphHeight }}
+        className="bg-white border border-gray-200 rounded-lg overflow-hidden absolute inset-0"
       >
         <ForceGraph2D
           graphData={graphData}
-          width={graphWidth - (showControls ? 300 : 0)}
-          height={graphHeight}
+          width={dimensions.width}
+          height={dimensions.height}
           backgroundColor="#ffffff"
           
           // Node styling
@@ -367,15 +425,15 @@ const Graph: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex">
+        <div className="flex" style={{ height: graphHeight }}>
           {/* Main Graph Area */}
-          <div className="flex-1">
+          <div className="flex-1 relative">
             {renderGraph()}
           </div>
 
           {/* Side Panel */}
           {showControls && (
-            <div className="w-80 border-l border-gray-200 bg-gray-50 p-4 overflow-y-auto" style={{ height: graphHeight }}>
+            <div className="w-80 border-l border-gray-200 bg-gray-50 p-4 overflow-y-auto flex-shrink-0">
               {/* Statistics */}
               <div className="mb-6">
                 <h4 className="text-sm font-medium text-gray-700 mb-3">Graph Statistics</h4>
