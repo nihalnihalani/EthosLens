@@ -1,10 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, XCircle, AlertTriangle, Clock, Shield, Eye, FileText, MessageSquare, Activity } from 'lucide-react';
+import { getAgentIcon, getAgentActionConfig } from '../utils/badgeUtils';
 
 interface AgentBadgeProps {
   agentName: string;
-  action: 'flag' | 'approve' | 'suggest' | 'log' | 'verify';
+  action: 'flag' | 'approve' | 'suggest' | 'log' | 'block';
   details: string;
   timestamp: Date;
   animated?: boolean;
@@ -17,73 +17,8 @@ const AgentBadge: React.FC<AgentBadgeProps> = ({
   timestamp, 
   animated = true 
 }) => {
-  const getAgentIcon = (name: string) => {
-    switch (name) {
-      case 'PolicyEnforcerAgent':
-        return Shield;
-      case 'VerifierAgent':
-        return Eye;
-      case 'AuditLoggerAgent':
-        return FileText;
-      case 'ResponseAgent':
-        return MessageSquare;
-      case 'FeedbackAgent':
-        return Activity;
-      default:
-        return Shield;
-    }
-  };
-
-  const getActionConfig = (action: string) => {
-    switch (action) {
-      case 'flag':
-      case 'block':
-        return {
-          icon: XCircle,
-          color: 'bg-gradient-to-r from-red-100 to-red-200 text-red-900 border-red-400 shadow-md',
-          iconColor: 'text-red-600',
-          emoji: action === 'block' ? '🚫' : '⚠️'
-        };
-      case 'approve':
-        return {
-          icon: CheckCircle,
-          color: 'bg-gradient-to-r from-green-50 to-green-100 text-green-800 border-green-300 shadow-sm',
-          iconColor: 'text-green-600',
-          emoji: '✅'
-        };
-      case 'verify':
-        return {
-          icon: CheckCircle,
-          color: 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-800 border-blue-300 shadow-sm',
-          iconColor: 'text-blue-600',
-          emoji: '🔍'
-        };
-      case 'suggest':
-        return {
-          icon: AlertTriangle,
-          color: 'bg-gradient-to-r from-amber-50 to-amber-100 text-amber-800 border-amber-300 shadow-sm',
-          iconColor: 'text-amber-600',
-          emoji: '💡'
-        };
-      case 'log':
-        return {
-          icon: Clock,
-          color: 'bg-gradient-to-r from-slate-50 to-slate-100 text-slate-700 border-slate-300 shadow-sm',
-          iconColor: 'text-slate-600',
-          emoji: '📝'
-        };
-      default:
-        return {
-          icon: Clock,
-          color: 'bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 border-gray-300 shadow-sm',
-          iconColor: 'text-gray-600',
-          emoji: '⚡'
-        };
-    }
-  };
-
   const AgentIcon = getAgentIcon(agentName);
-  const actionConfig = getActionConfig(action);
+  const actionConfig = getAgentActionConfig(action);
   const ActionIcon = actionConfig.icon;
 
   const formatAgentName = (name: string) => {
@@ -91,42 +26,46 @@ const AgentBadge: React.FC<AgentBadgeProps> = ({
   };
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour12: false, 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit' 
-    });
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
   };
 
   return (
     <motion.div
-      initial={animated ? { opacity: 0, scale: 0.8, y: 20 } : false}
+      initial={animated ? { opacity: 0, scale: 0.9, y: 10 } : false}
       animate={animated ? { opacity: 1, scale: 1, y: 0 } : false}
       whileHover={{ scale: 1.02 }}
-      className={`flex items-center justify-between p-4 rounded-xl border ${actionConfig.color} transition-all duration-300 hover:shadow-md backdrop-blur-sm`}
+      className={`inline-flex items-center space-x-3 px-4 py-3 rounded-xl border ${actionConfig.color} font-medium text-sm backdrop-blur-sm transition-all duration-200`}
     >
-      <div className="flex items-center space-x-3">
-        <div className="flex items-center space-x-2 bg-white/50 rounded-lg p-2">
-          <AgentIcon className={`h-5 w-5 ${actionConfig.iconColor}`} />
-          <ActionIcon className={`h-4 w-4 ${actionConfig.iconColor}`} />
+      {/* Agent Icon */}
+      <div className="flex items-center space-x-2">
+        <div className="bg-white/60 p-1.5 rounded-lg shadow-sm">
+          <AgentIcon className="h-4 w-4 text-gray-700" />
         </div>
-        
-        <div className="flex-1">
-          <div className="flex items-center space-x-2">
-            <span className="font-semibold text-sm">
-              {formatAgentName(agentName)}
-            </span>
-            <span className="text-base">{actionConfig.emoji}</span>
-          </div>
-          <p className="text-xs opacity-90 mt-1.5 leading-relaxed font-medium">{details}</p>
+        <div className="bg-white/40 p-1 rounded-full">
+          <ActionIcon className={`h-3 w-3 ${actionConfig.iconColor}`} />
         </div>
       </div>
-      
-      <div className="text-right bg-white/30 rounded-md px-2 py-1">
-        <span className="text-xs opacity-75 font-mono font-medium">
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center space-x-2">
+          <span className="font-semibold text-xs">
+            {formatAgentName(agentName)}
+          </span>
+          <span className="text-lg leading-none">{actionConfig.emoji}</span>
+        </div>
+        <p className="text-xs opacity-90 truncate mt-0.5" title={details}>
+          {details}
+        </p>
+        <p className="text-xs opacity-70 mt-1">
           {formatTime(timestamp)}
-        </span>
+        </p>
       </div>
     </motion.div>
   );

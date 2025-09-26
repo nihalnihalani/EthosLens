@@ -7,12 +7,55 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
 # Build output
-dist
-# Build output
-dist-ssr
-*.local
+dist/
+dist-ssr/
+build/
+out/
+
+# Dependency directories
+node_modules/
+
+# Vite build cache
+.vite/
+.vite-cache/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Build artifacts and cache
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.output/
+
+# Optional eslint cache
+.eslintcache
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Temporary folders
+tmp/
+temp/
+
+# Environment files (contains sensitive API keys)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
 
 # Editor directories and files
 .vscode/*
@@ -24,4 +67,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.env
+
+# macOS file system
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Windows thumbnail cache files
+Thumbs.db
+ehthumbs.db

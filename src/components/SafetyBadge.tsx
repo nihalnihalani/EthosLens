@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Shield, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { Shield } from 'lucide-react';
+import { getSafetyStatusConfig } from '../utils/badgeUtils';
 
 interface SafetyBadgeProps {
   status: 'safe' | 'flagged' | 'blocked';
@@ -13,36 +14,7 @@ const SafetyBadge: React.FC<SafetyBadgeProps> = ({
   violationCount = 0, 
   animated = true 
 }) => {
-  const getStatusConfig = () => {
-    switch (status) {
-      case 'safe':
-        return {
-          icon: CheckCircle,
-          color: 'bg-gradient-to-r from-emerald-50 to-green-100 text-emerald-800 border-emerald-300 shadow-lg',
-          iconColor: 'text-green-600',
-          label: '✅ SAFE',
-          description: 'No violations detected'
-        };
-      case 'flagged':
-        return {
-          icon: AlertTriangle,
-          color: 'bg-gradient-to-r from-amber-50 to-yellow-100 text-amber-800 border-amber-300 shadow-lg',
-          iconColor: 'text-amber-600',
-          label: '⚠️ FLAGGED',
-          description: `${violationCount} violation${violationCount !== 1 ? 's' : ''} detected`
-        };
-      case 'blocked':
-        return {
-          icon: XCircle,
-          color: 'bg-gradient-to-r from-red-50 to-red-100 text-red-800 border-red-300 shadow-lg',
-          iconColor: 'text-red-600',
-          label: '❌ BLOCKED',
-          description: `${violationCount} violation${violationCount !== 1 ? 's' : ''} detected`
-        };
-    }
-  };
-
-  const config = getStatusConfig();
+  const config = getSafetyStatusConfig(status, violationCount);
   const Icon = config.icon;
 
   return (

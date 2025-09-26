@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Network, 
@@ -13,7 +13,6 @@ import {
   Users,
   FileText
 } from 'lucide-react';
-import Dynamic2DGraph from './Dynamic2DGraph';
 import { apiService } from '../api/apiService';
 
 interface GraphNode {
@@ -37,26 +36,39 @@ interface GraphData {
   links: GraphLink[];
 }
 
-const SimpleGraphVisualization: React.FC = () => {
+const Graph: React.FC = () => {
   const [graphData, setGraphData] = useState<GraphData>({ nodes: [], links: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [showControls, setShowControls] = useState(true);
+  const [ForceGraph2D, setForceGraph2D] = useState<any>(null);
+  const [isGraphLoading, setIsGraphLoading] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Load the 2D force graph library
+  useEffect(() => {
+    import('react-force-graph-2d').then((module) => {
+      setForceGraph2D(() => module.default);
+      setIsGraphLoading(false);
+    }).catch(() => {
+      setIsGraphLoading(false);
+    });
+  }, []);
 
   // Fetch graph data
   const fetchGraphData = useCallback(async () => {
     try {
       setIsLoading(true);
-      console.log('Fetching graph data for 2D visualization...');
+      console.log('Fetching graph data for visualization...');
       const data = await apiService.getGraphData();
-      console.log('2D Graph data received:', data);
+      console.log('Graph data received:', data);
       setGraphData(data);
       setError(null);
     } catch (err) {
       setError('Failed to load graph data');
-      console.error('2D Graph data fetch error:', err);
+      console.error('Graph data fetch error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -69,9 +81,35 @@ const SimpleGraphVisualization: React.FC = () => {
     return () => clearInterval(interval);
   }, [fetchGraphData]);
 
+  // Get node color based on type
+  const getNodeColor = useCallback((node: GraphNode) => {
+    const colors: Record<string, string> = {
+      'Interaction': '#4A90E2',
+      'Violation': '#E74C3C',
+      'AgentAction': '#2ECC71',
+      'UserFeedback': '#F39C12',
+      'AuditLog': '#9B59B6',
+      'Settings': '#95A5A6'
+    };
+    return colors[node.type] || '#95A5A6';
+  }, []);
+
+  // Get link color based on type
+  const getLinkColor = useCallback((link: GraphLink) => {
+    const colors: Record<string, string> = {
+      'HAS_VIOLATION': '#E74C3C',
+      'PROCESSED_BY': '#2ECC71',
+      'TRIGGERED_ACTION': '#F39C12',
+      'HAS_FEEDBACK': '#3498DB',
+      'AUDITS': '#9B59B6',
+      'default': '#888888'
+    };
+    return colors[link.type] || colors.default;
+  }, []);
+
   // Handle node click
-  const handleNodeClick = useCallback((node: GraphNode) => {
-    setSelectedNode(node);
+  const handleNodeClick = useCallback((node: any) => {
+    setSelectedNode(node as GraphNode);
     console.log('Node clicked:', node);
   }, []);
 
@@ -109,6 +147,144 @@ const SimpleGraphVisualization: React.FC = () => {
 
   const graphWidth = isFullscreen ? window.innerWidth : 800;
   const graphHeight = isFullscreen ? window.innerHeight : 500;
+
+  // Render the 2D graph component
+  const renderGraph = () => {
+    if (isGraphLoading || !ForceGraph2D) {
+      return (
+        <div 
+          className="flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg"
+          style={{ width: graphWidth - (showControls ? 300 : 0), height: graphHeight }}
+        >
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto mb-2"></div>
+            <p className="text-sm text-gray-600">Loading Graph...</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (!ForceGraph2D) {
+      return (
+        <div 
+          className="flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg"
+          style={{ width: graphWidth - (showControls ? 300 : 0), height: graphHeight }}
+        >
+          <div className="text-center">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
+              <span className="text-red-600 text-xl">⚠️</span>
+            </div>
+            <p className="text-sm text-red-600">Graph library failed to load</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (graphData.nodes.length === 0) {
+      return (
+        <div 
+          className="flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg"
+          style={{ width: graphWidth - (showControls ? 300 : 0), height: graphHeight }}
+        >
+          <div className="text-center">
+            <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center mx-auto mb-2">
+              <span className="text-gray-500 text-xl">📊</span>
+            </div>
+            <p className="text-sm text-gray-600">No graph data available</p>
+            <p className="text-xs text-gray-400 mt-1">Process some interactions to see the graph</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div 
+        ref={containerRef}
+        className="bg-white border border-gray-200 rounded-lg overflow-hidden"
+        style={{ width: graphWidth - (showControls ? 300 : 0), height: graphHeight }}
+      >
+        <ForceGraph2D
+          graphData={graphData}
+          width={graphWidth - (showControls ? 300 : 0)}
+          height={graphHeight}
+          backgroundColor="#ffffff"
+          
+          // Node styling
+          nodeColor={getNodeColor}
+          nodeVal={(node: any) => {
+            if (node.type === 'Violation') {
+              return Math.max(4, (node.properties?.severity || 5) * 0.8);
+            }
+            return node.type === 'Interaction' ? 8 : 6;
+          }}
+          nodeLabel={(node: any) => `
+            <div style="
+              background: rgba(0,0,0,0.8); 
+              color: white; 
+              padding: 8px 12px; 
+              border-radius: 6px; 
+              font-size: 12px;
+              max-width: 200px;
+            ">
+              <strong>${node.type}</strong><br/>
+              ${node.label}<br/>
+              <small style="opacity: 0.8;">Click for details</small>
+            </div>
+          `}
+          
+          // Link styling
+          linkColor={getLinkColor}
+          linkWidth={2}
+          linkDirectionalArrowLength={6}
+          linkDirectionalArrowRelPos={1}
+          linkLabel={(link: any) => `
+            <div style="
+              background: rgba(0,0,0,0.8); 
+              color: white; 
+              padding: 6px 10px; 
+              border-radius: 4px; 
+              font-size: 11px;
+            ">
+              ${link.type}
+            </div>
+          `}
+          
+          // Interactions
+          onNodeClick={handleNodeClick}
+          
+          // Physics
+          d3AlphaDecay={0.02}
+          d3VelocityDecay={0.3}
+          warmupTicks={100}
+          cooldownTicks={200}
+          
+          // Node canvas rendering for better performance
+          nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+            const label = node.label;
+            const fontSize = 12/globalScale;
+            ctx.font = `${fontSize}px Sans-Serif`;
+            
+            // Draw node circle
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, node.val || 5, 0, 2 * Math.PI, false);
+            ctx.fillStyle = getNodeColor(node);
+            ctx.fill();
+            
+            // Draw border
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2/globalScale;
+            ctx.stroke();
+            
+            // Draw label
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#333333';
+            ctx.fillText(label, node.x, node.y + (node.val || 5) + fontSize + 2);
+          }}
+        />
+      </div>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -194,12 +370,7 @@ const SimpleGraphVisualization: React.FC = () => {
         <div className="flex">
           {/* Main Graph Area */}
           <div className="flex-1">
-            <Dynamic2DGraph
-              data={graphData}
-              width={graphWidth - (showControls ? 300 : 0)}
-              height={graphHeight}
-              onNodeClick={handleNodeClick}
-            />
+            {renderGraph()}
           </div>
 
           {/* Side Panel */}
@@ -294,4 +465,4 @@ const SimpleGraphVisualization: React.FC = () => {
   );
 };
 
-export default SimpleGraphVisualization;
+export default Graph;

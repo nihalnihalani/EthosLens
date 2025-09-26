@@ -47,19 +47,27 @@ npm install
 
 ### Environment Setup
 
-Create a `.env` file:
-```env
-# Neo4j Configuration (Optional)
-VITE_NEO4J_URI=your_neo4j_uri
-VITE_NEO4J_USERNAME=your_username
-VITE_NEO4J_PASSWORD=your_password
-VITE_NEO4J_DATABASE=your_database
-
-# API Keys (Optional)
-VITE_OPENAI_API_KEY=your_openai_key
-VITE_GROQ_API_KEY=your_groq_key
-VITE_PERPLEXITY_API_KEY=your_perplexity_key
+Copy the example environment file and configure your API keys:
+```bash
+cp .env.example .env
 ```
+
+Then edit `.env` with your actual API keys:
+```env
+# OpenAI API Configuration
+VITE_OPENAI_API_KEY=your_openai_api_key_here
+
+# Perplexity API Configuration
+VITE_PERPLEXITY_API_KEY=your_perplexity_api_key_here
+
+# Neo4j Configuration
+VITE_NEO4J_URI=your_neo4j_uri_here
+VITE_NEO4J_USERNAME=your_neo4j_username_here
+VITE_NEO4J_PASSWORD=your_neo4j_password_here
+VITE_NEO4J_DATABASE=your_database_name_here
+```
+
+⚠️ **Security Note**: Never commit your `.env` file to version control. It contains sensitive API keys.
 
 ### Run the Application
 

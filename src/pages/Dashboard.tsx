@@ -8,7 +8,7 @@ import PerplexityStatus from '../components/PerplexityStatus';
 import Neo4jStatus from '../components/Neo4jStatus';
 import { apiService } from '../api/apiService';
 import EmptyState from '../components/EmptyState';
-import SimpleGraphVisualization from '../components/SimpleGraphVisualization';
+import Graph from '../components/Graph';
 import EnvTest from '../components/EnvTest';
 import { BarChart3 } from 'lucide-react';
 
@@ -91,7 +91,7 @@ const Dashboard: React.FC = () => {
 
       <EnvTest />
 
-      <SimpleGraphVisualization />
+      <Graph />
 
       {stats.topViolations.length > 0 && (
         <div>
